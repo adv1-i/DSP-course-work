@@ -11,14 +11,11 @@ import javafx.scene.Scene;
 import javafx.stage.FileChooser;
 import javafx.embed.swing.SwingNode;
 import javafx.scene.image.ImageView;
-import javafx.scene.image.WritableImage;
 import javafx.embed.swing.SwingFXUtils;
 
 import javax.imageio.ImageIO;
-import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.awt.image.WritableRaster;
 import java.io.*;
 import java.util.*;
 import java.util.List;
@@ -26,7 +23,6 @@ import java.util.List;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYItemRenderer;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
@@ -508,7 +504,7 @@ public class ProjectionViewer extends Application {
         }
     }
 
-    private double[] getSpectrums(double[] projections, int buffN, int M) {
+    private double[] getFourierTransformsOfProjections(double[] projections, int buffN, int M) {
         // Вычисляем размер спектра
         int N = buffN * 4;
         // Создаем массив для хранения результатов
@@ -596,7 +592,7 @@ private double[] calculateMagnitude(double[] complexArray, int M, int N) {
         double buffQ = 0;
 
         // Получаем спектры проекций
-        double[] projectionsDft = getSpectrums(projections, buffN, M);
+        double[] projectionsDft = getFourierTransformsOfProjections(projections, buffN, M);
 
         // Перебираем все проекции
         for (int p = 0; p < M; p++) {
@@ -608,8 +604,8 @@ private double[] calculateMagnitude(double[] complexArray, int M, int N) {
             for (int s = 0; s < N; s++) {
                 // Вычисляем координаты точки в пространстве
                 double t = (s - (N / 2));
-                double wx = t * sinA;
-                double wy = t * cosA;
+                double wx = t * cosA;
+                double wy = t * sinA;
                 int x = (int) Math.round(wx + (N / 2));
                 int y = (int) Math.round(wy + (N / 2));
 
@@ -738,54 +734,51 @@ private double[] calculateMagnitude(double[] complexArray, int M, int N) {
     }
 
     // Метод для применения Гауссова фильтра к данным
-    private double[] applyGaussianFilter(double[] data, double cutoffFrequency) {
-        // Определение размера данных
-        int size = data.length;
-        // Создание массива для хранения результата
-        double[] result = new double[size];
-        // Определение сигмы для Гауссова фильтра
-        double sigma = cutoffFrequency;
-        // Инициализация переменной для суммирования элементов ядра
-        double sum = 0.0;
+    private double[] applyGaussianFilter(double[] array, double sigma) {
+        int N = array.length;
+        int middle = N / 2;
 
-        // Создание ядра Гауссова фильтра
-        double[] kernel = new double[size];
-        for (int i = 0; i < size; i++) {
-            // Вычисление i-го элемента ядра
-            kernel[i] = (1.0 / (2.0 * Math.PI * sigma * sigma)) * Math.exp(-(i * i) / (2 * sigma * sigma));
-            // Суммирование элементов ядра
-            sum += kernel[i];
+        // Создаем фильтр Гаусса
+        double[] filter = new double[N];
+        for (int i = 0; i < N; i++) {
+            double x = i - middle;
+            filter[i] = Math.exp(-(x * x) / (2 * sigma * sigma));
         }
 
-        // Нормализация ядра (деление каждого элемента на сумму всех элементов)
-        for (int i = 0; i < size; i++) {
-            kernel[i] /= sum;
-        }
-
-        // Применение свертки в прямом направлении (умножение каждого элемента данных на соответствующий элемент ядра и суммирование результатов)
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                // Вычисление индекса для циклического смещения
-                int k = (i + j) % size;
-                // Применение свертки
-                result[i] += data[k] * kernel[j];
+        // Применяем фильтр к исходному массиву
+        double[] filteredArray = new double[N];
+        for (int i = 0; i < N; i++) {
+            double sum = 0;
+            for (int j = 0; j < N; j++) {
+                int index = (i + j - middle + N) % N;
+                sum += array[index] * filter[j];
             }
+            filteredArray[i] = sum;
         }
 
-        // Применение свертки в обратном направлении
-        double[] result2 = new double[size];
-        for (int i = size - 1; i >= 0; i--) {
-            for (int j = 0; j < size; j++) {
-                // Вычисление индекса для циклического смещения
-                int k = (i - j + size) % size;
-                // Применение свертки
-                result2[i] += result[k] * kernel[j];
-            }
-        }
+        // Нормализация отфильтрованных данных
+        normalizeData(array, filteredArray);
 
-        // Возвращение результата
-        return result2;
+        return filteredArray;
     }
+
+    private void normalizeData(double[] originalData, double[] filteredData) {
+        double min = Arrays.stream(filteredData).min().getAsDouble();
+        double max = Arrays.stream(filteredData).max().getAsDouble();
+        double originalMin = Arrays.stream(originalData).min().getAsDouble();
+        double originalMax = Arrays.stream(originalData).max().getAsDouble();
+
+        double scale = (originalMax - originalMin) / (max - min);
+        double shift = originalMin - min * scale;
+
+        for (int i = 0; i < filteredData.length; i++) {
+            filteredData[i] = filteredData[i] * scale + shift;
+        }
+
+    }
+
+
+
 
 
     public static void main(String[] args) {
