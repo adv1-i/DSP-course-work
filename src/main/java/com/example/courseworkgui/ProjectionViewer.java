@@ -481,6 +481,7 @@ public class ProjectionViewer extends Application {
         plot.getDomainAxis().setRange(minX, maxX);
     }
 
+    // Метод для деления каждого элемента массива на произведение M и N.
     private void divSize(double[] array, int M, int N) {
         // Перебираем все элементы массива
         for (int i = 0; i < M*N; i++) {
@@ -490,6 +491,7 @@ public class ProjectionViewer extends Application {
         }
     }
 
+    // Метод для умножения каждого элемента массива на (-1) в степени суммы индексов i и j.
     private void multiplyByMinusOnePowerSum(double[] array, int M, int N) {
         // Перебираем все строки массива
         for (int i = 0; i < M; i++) {
@@ -504,6 +506,7 @@ public class ProjectionViewer extends Application {
         }
     }
 
+    // Метод для получения преобразований Фурье проекций.
     private double[] getFourierTransformsOfProjections(double[] projections, int buffN, int M) {
         // Вычисляем размер спектра
         int N = buffN * 4;
@@ -529,34 +532,24 @@ public class ProjectionViewer extends Application {
         return result;
     }
 
-//    private double[][] calculateMagnitude(double[][] complexArray) {
-//        int N = complexArray.length;
-//        double[][] magnitude = new double[N][N];
-//        for (int i = 0; i < N; i++) {
-//            for (int j = 0; j < N; j++) {
-//                double real = complexArray[i][2*j];
-//                double imag = complexArray[i][2*j+1];
-//                magnitude[i][j] = Math.sqrt(real*real + imag*imag);
-//            }
-//        }
-//        return magnitude;
-//    }
-private double[] calculateMagnitude(double[] complexArray, int M, int N) {
-    // Создаем массив для хранения магнитуды
-    double[] magnitude = new double[M * N];
-    // Перебираем все элементы комплексного массива
-    for (int i = 0; i < M * N; i++) {
-        // Вычисляем реальную и мнимую части комплексного числа
-        double real = complexArray[2 * i];
-        double imag = complexArray[2 * i + 1];
-        // Вычисляем магнитуду комплексного числа
-        magnitude[i] = Math.sqrt(real*real + imag*imag);
-        // Применяем логарифмическую шкалу к магнитуде
-        magnitude[i] = Math.log(1 + magnitude[i]);
+    // Метод для вычисления магнитуды комплексного массива.
+    private double[] calculateMagnitude(double[] complexArray, int M, int N) {
+        // Создаем массив для хранения магнитуды
+        double[] magnitude = new double[M * N];
+        // Перебираем все элементы комплексного массива
+        for (int i = 0; i < M * N; i++) {
+            // Вычисляем реальную и мнимую части комплексного числа
+            double real = complexArray[2 * i];
+            double imag = complexArray[2 * i + 1];
+            // Вычисляем магнитуду комплексного числа
+            magnitude[i] = Math.sqrt(real*real + imag*imag);
+            // Применяем логарифмическую шкалу к магнитуде
+            magnitude[i] = Math.log(1 + magnitude[i]);
+        }
+        return magnitude;
     }
-    return magnitude;
-}
 
+    // Метод для масштабирования массива от 0 до 255.
     public static double[] scaleArrayN(double[] arr) {
         // Инициализируем минимальное и максимальное значения массива
         double min = arr[0];
@@ -570,7 +563,6 @@ private double[] calculateMagnitude(double[] complexArray, int M, int N) {
                 max = arr[i];
             }
         }
-
         // Масштабируем значения от 0 до 255
         double[] scaledArray = new double[arr.length];
         for (int i = 0; i < arr.length; i++) {
@@ -580,6 +572,7 @@ private double[] calculateMagnitude(double[] complexArray, int M, int N) {
         return scaledArray;
     }
 
+
     // Метод для синтеза изображения из проекций
     private BufferedImage[] synthesizeImage(double[] projections, int buffN, int M) {
         // Устанавливаем размер изображения
@@ -588,29 +581,34 @@ private double[] calculateMagnitude(double[] complexArray, int M, int N) {
         BufferedImage[] images = new BufferedImage[2];
         // Создаем массив для хранения синтезированного FFT
         double[] synthesized_fft = new double[(N * N)*2];
-        // Инициализируем переменную для хранения угла
-        double buffQ = 0;
+        double buffQ = 0; // Начальный угол поворота в градусах
 
         // Получаем спектры проекций
         double[] projectionsDft = getFourierTransformsOfProjections(projections, buffN, M);
 
-        // Перебираем все проекции
+        // Цикл по “M” одномерным образам проекций.
         for (int p = 0; p < M; p++) {
-            // Вычисляем косинус и синус угла
+            // Вычисляем косинус и синус угла поворота
             double cosA = Math.cos(Math.toRadians(buffQ));
             double sinA = Math.sin(Math.toRadians(buffQ));
 
-            // Перебираем все точки в проекции
+            //s – номер ячейки в образе проекции.
+            // Ячейка “s” в массиве с текущим образом проекции
             for (int s = 0; s < N; s++) {
                 // Вычисляем координаты точки в пространстве
-                double t = (s - (N / 2));
-                double wx = t * cosA;
-                double wy = t * sinA;
-                int x = (int) Math.round(wx + (N / 2));
-                int y = (int) Math.round(wy + (N / 2));
+                double t = (s - (N / 2)); // координата “t” ячейки “s” в полярной системе с углом Q.
+                                          // “s - (N / 2)” – чтобы образы проекций при повороте были
+                                          // симметричны относительно начала координат (точки “0”).
+                double wx = t * cosA; // Координата “wx” в прямоугольной системе координат.
+                double wy = t * sinA; // Координата “wy” в прямоугольной системе координат.
+                int x = (int) Math.round(wx + (N / 2)); //номер столбца в синтезируемом двумерном фурье-образе.
+                                                        // “wx + (N / 2)” – поскольку в массиве нет ячеек с отрицательными индексами.
+                int y = (int) Math.round(wy + (N / 2)); //номер строки в синтезируемом двумерном фурье-образе.
+                                                        // “wy + (N / 2)” – поскольку в массиве нет ячеек с отрицательными индексами.
 
-                // Если координаты в пределах изображения, копируем данные в синтезированный FFT
+                //Чтобы не выйти за диапазон массива.
                 if (x < N && x > -1 && y < N && y > -1) {
+                    // Синтезируемый 2D спектр искомого сечения
                     synthesized_fft[2 * (x * N + y)] = projectionsDft[2 * ((p * N) + s)];
                     synthesized_fft[2 * (x * N + y) + 1] = projectionsDft[2 * ((p * N) + s) + 1];
                 }
@@ -631,7 +629,7 @@ private double[] calculateMagnitude(double[] complexArray, int M, int N) {
             for (int j = 0; j < N; j++) {
                 int index = i * N + j;
                 int rgb = (int)scaledMagnitudeSpectrum[index];
-                int color = (rgb << 16);
+                int color = (rgb << 16) | (rgb << 8) | (rgb);
                 images[0].setRGB(i, j, color);
             }
         }
@@ -655,7 +653,7 @@ private double[] calculateMagnitude(double[] complexArray, int M, int N) {
             for (int j = 0; j < N; j++) {
                 int index = i * N + j;
                 int rgb = (int)scaledMagnitudeRestored[2*index];
-                int color = (rgb << 16);
+                int color = (rgb << 16) | (rgb << 8) | (rgb);
                 images[1].setRGB(i, j, color);
             }
         }
@@ -666,6 +664,30 @@ private double[] calculateMagnitude(double[] complexArray, int M, int N) {
         return images;
     }
 
+
+    // Метод для обрезки изображения, представленного в виде списка целых чисел.
+    public static List<Integer> cropImage(List<Integer> array) {
+        // Размер блока данных, который будет обрабатываться за один раз.
+        int chunkSize = 800;
+        // Размер области, которую нужно обрезать с каждой стороны блока.
+        int trimSize = 300;
+        // Список для хранения результата обрезки.
+        List<Integer> result = new ArrayList<>();
+
+        // Проходим по входному массиву, обрабатывая блоки данных размером chunkSize и обрезая trimSize с каждой стороны.
+        for (int i = trimSize * chunkSize; i < array.size() - (trimSize * chunkSize); i += chunkSize) {
+            // Выделяем блок данных из входного массива.
+            List<Integer> chunk = array.subList(i, Math.min(i + chunkSize, array.size()));
+            // Обрезаем блок данных, удаляя trimSize элементов с каждой стороны.
+            List<Integer> trimmedChunk = chunk.subList(trimSize, chunk.size() - trimSize);
+            // Добавляем обрезанный блок в результат.
+            result.addAll(trimmedChunk);
+        }
+
+        // Возвращаем результат обрезки.
+        return result;
+    }
+
     // Метод для обрезки изображения до оригинального размера
     private BufferedImage cropImage(BufferedImage image, int originalSize) {
         // Вычисляем размер отступа
@@ -673,6 +695,7 @@ private double[] calculateMagnitude(double[] complexArray, int M, int N) {
         // Возвращаем подизображение
         return image.getSubimage(padding, padding, originalSize, originalSize);
     }
+
 
     // Метод для получения проекции из массива проекций
     private double[] getProjection(double[] projections, int p, int N) {
@@ -705,7 +728,6 @@ private double[] calculateMagnitude(double[] complexArray, int M, int N) {
         for (int i = 0; i < paddedData.length; i++) {
             shiftedData[i] = filteredData[(i + shift) % paddedData.length];
         }
-
         // Возвращаем подготовленные данные
         return shiftedData;
     }
@@ -721,7 +743,6 @@ private double[] calculateMagnitude(double[] complexArray, int M, int N) {
         for (int i = 0; i < fftSpectrum.length; i++) {
             seriesFFT.add(i, fftSpectrum[i]);
         }
-
         // Создаем график для FFT
         XYSeriesCollection datasetFFT = new XYSeriesCollection();
         datasetFFT.addSeries(seriesFFT);
@@ -733,20 +754,27 @@ private double[] calculateMagnitude(double[] complexArray, int M, int N) {
         );
     }
 
-    // Метод для применения Гауссова фильтра к данным
-    private double[] applyGaussianFilter(double[] array, double sigma) {
+    // Метод применяет Гауссовский фильтр к входному массиву с заданной частотой среза.
+    private double[] applyGaussianFilter(double[] array, double cutoffFrequency) {
+
+        // Определяем длину входного массива
         int N = array.length;
+        // Определяем середину входного массива
         int middle = N / 2;
 
-        // Создаем фильтр Гаусса
+        // Создаем Гауссовский фильтр с длиной, равной длине входного массива
         double[] filter = new double[N];
+
+        // Заполняем фильтр Гаусса значениями, основанными на формуле Гаусса
         for (int i = 0; i < N; i++) {
             double x = i - middle;
-            filter[i] = Math.exp(-(x * x) / (2 * sigma * sigma));
+            filter[i] = Math.exp(-(x * x) / (2 * cutoffFrequency * cutoffFrequency));
         }
 
-        // Применяем фильтр к исходному массиву
+        // Создаем массив для хранения отфильтрованных данных
         double[] filteredArray = new double[N];
+
+        // Применяем Гауссовский фильтр к входному массиву
         for (int i = 0; i < N; i++) {
             double sum = 0;
             for (int j = 0; j < N; j++) {
@@ -755,10 +783,10 @@ private double[] calculateMagnitude(double[] complexArray, int M, int N) {
             }
             filteredArray[i] = sum;
         }
-
-        // Нормализация отфильтрованных данных
+        // Нормализуем отфильтрованные данные
         normalizeData(array, filteredArray);
 
+        // Возвращаем отфильтрованный массив
         return filteredArray;
     }
 
@@ -774,11 +802,7 @@ private double[] calculateMagnitude(double[] complexArray, int M, int N) {
         for (int i = 0; i < filteredData.length; i++) {
             filteredData[i] = filteredData[i] * scale + shift;
         }
-
     }
-
-
-
 
 
     public static void main(String[] args) {
